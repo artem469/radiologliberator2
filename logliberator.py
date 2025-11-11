@@ -8,8 +8,12 @@
 # Log Liberator v0.1
 
 import re
+import sys
+
 import requests
 from bs4 import BeautifulSoup as soup
+from pip._vendor.distlib.compat import raw_input
+
 from ADIF_log import ADIF_log
 
 def assign_value(entry, name, value):
@@ -226,13 +230,13 @@ with requests.Session() as s:
 	#r = s.get('http://logbook.qrz.com')
 
 print('Getting Book ID(s)')
-r = s.post('http://logbook.qrz.com', data={'page':1})
-data = soup(r.text)
+r = s.post('https://logbook.qrz.com', data={'page':1})
+data = soup(r.text, 'html.parser')
 bookids = []
-all_bookids = data.findAll('option', attrs={'id':re.compile('^booksel'),'value':re.compile('^[0-9]+$')})
+all_bookids = data.find_all('option', attrs={'id':re.compile('^booksel'),'value':re.compile('^[0-9]+$')})
 for id in all_bookids:
 	bookids.append(int(id['value']))
-print bookids
+print(bookids)
 
 handler = Handler()
 
@@ -240,12 +244,12 @@ for bookid in bookids:
 	adif = ADIF_log("Radio Log Liberator")
 
 	print('Getting total QSOs')
-	r = s.post('http://logbook.qrz.com', data={'bookid':bookid})
-	data = soup(r.text)
+	r = s.post('https://logbook.qrz.com', data={'bookid':bookid})
+	data = soup(r.text, 'html.parser')
 	total_qsos = data.find('input', attrs={'name':'logcount'})
 	if total_qsos is None:
 		print('Unable to find number of QSOs')
-		system.exit(1)
+		sys.exit(1)
 	total_qsos = int(total_qsos['value'])
 
 	print('Fetching '+str(total_qsos)+' from book '+str(bookid))
@@ -253,13 +257,13 @@ for bookid in bookids:
 	for i in range(0, total_qsos):
 		print("Working on QSO: %s" % i)
 		getpages = {'op':'show', 'bookid':bookid, 'logpos':i};
-		r = s.post('http://logbook.qrz.com', data=getpages)
-		data = soup(r.text)
+		r = s.post('https://logbook.qrz.com', data=getpages)
+		data = soup(r.text, 'html.parser')
 		logitem = data.find('div', id='logitem')
 		if logitem is None:
 			print('Unable to find log item for QSO '+str(i+1))
 			continue
-		rows = logitem.findAll('tr')
+		rows = logitem.fin_all('tr')
 		if len(rows) == 0:
 			print('Unable to find QSO details for QSO '+str(i+1))
 			continue
