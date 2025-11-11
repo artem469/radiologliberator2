@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import re
-from xml.sax import make_parser 
+from xml.sax import make_parser, SAXParseException
 from xml.sax.handler import ContentHandler
 from xml.sax.saxutils import (escape, quoteattr)
 
@@ -1147,24 +1147,24 @@ _fieldTypes = {
 def validate(name, value, log):
 	field = log.getType(name)
 	if field is None:
-		raise AttributeError, name
+		raise AttributeError(name)
 	if 'regex' in field:
 		if field['regex'].search(value) is None:
-			raise ValueError, value
+			raise ValueError(value)
 	if 'validate' in field:
 		if not field['validate'](value):
-			raise ValueError, value
+			raise ValueError(value)
 	if 'enumeration' in field:
 		if not str(value).upper() in field['enumeration']:
-			raise ValueError, value
+			raise ValueError(value)
 	if 'type' in field and field['type'] in _types:
 		field = _types[field['type']]
 		if 'regex' in field:
 			if field['regex'].search(value) is None:
-				raise ValueError, value
+				raise ValueError(value)
 		if 'validate' in field:
 			if not field['validate'](value):
-				raise ValueError, value
+				raise ValueError(value)
 
 # Assignment functions
 # These coerce types from the obvious type to the internal one
@@ -1175,7 +1175,7 @@ class ADIF_logfield(object):
 	def __init__(self, entry, name, value):
 		ucn = str(name).upper()
 		if entry.log.getType(ucn) is None:
-			raise AttributeError, ucn
+			raise AttributeError(ucn)
 		self._entry = entry
 		self._name = ucn
 		self(value)
@@ -1259,11 +1259,11 @@ class ADXHandler(ContentHandler):
 	def startElement(self, name, attrs):
 		if name=='ADX' and not self._inADX:
 			if self._inADX:
-				raise SAXParseException, 'Nested ADX!'
+				raise SAXParseException('Nested ADX!')
 			self._inADX = True
 		elif name=='HEADER' and not self._inHeader:
 			if not self._inADX:
-				raise SAXParseException, 'Header outside of ADX!'
+				raise SAXParseException('Header outside of ADX!')
 			self._inHeader = True
 		elif name=='USERDEF' and self._inHeader:
 			self._userdefType = attrs.get('TYPE');
@@ -1272,23 +1272,23 @@ class ADXHandler(ContentHandler):
 			self._curString = ''
 		elif name=='RECORDS' and not self._inRecords:
 			if not self._inADX:
-				raise SAXParseException, 'Records outside of ADX!'
+				raise SAXParseException('Records outside of ADX!')
 			if self._inHeader:
-				raise SAXParseException, 'Records inside Header!'
+				raise SAXParseException('Records inside Header!')
 			self._inRecords = True
 		elif name=='RECORD':
 			if not self._inRecords:
-				raise SAXParseException, 'Record outside of RECORDS!'
+				raise SAXParseException('Record outside of RECORDS!')
 			if not self._inADX:
-				raise SAXParseException, 'Record outside of ADX!'
+				raise SAXParseException('Record outside of ADX!')
 			if self._inHeader:
-				raise SAXParseException, 'Record inside Header!'
+				raise SAXParseException('Record inside Header!')
 			if self._entry is None:
 				self._entry = self._log.newEntry()
 				self._curString=''
 				self._curAttr=None
 			else:
-				raise SAXParseException, 'Record inside record!'
+				raise SAXParseException('Record inside record!')
 		elif name=='USERDEF' and self._entry is not None:
 			self._curString = ''
 			self._curAttr = attrs.get('FIELDNAME')
@@ -1364,7 +1364,7 @@ class ADIF_log(list):
 					return
 				m = tagre.match(data)
 				if not m:
-					raise AttributeError, data[:80]
+					raise AttributeError(data[:80])
 				tagobj = {'name':m.group(1).lower()}
 				if m.group(2):
 					tagobj['len']=int(m.group(2))
